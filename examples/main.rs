@@ -22,7 +22,7 @@ impl Circuit<bls12_381::Scalar> for MyCircuit {
         let y = cs.alloc(|| "y", || self.y.ok_or(SynthesisError::AssignmentMissing))?;
 
         //
-        cs.enforce(|| "x = y", |lc| lc  + x - y, |lc| lc + CS::one(), |lc| lc);
+        cs.enforce(|| "x = y", |lc| lc + x - y, |lc| lc + CS::one(), |lc| lc);
 
         Ok(())
     }
@@ -32,7 +32,7 @@ fn main() {
     let rng = &mut thread_rng();
 
     let x_input = Scalar::from(2);
-    let y_input = Scalar::from(2);
+    let y_input = Scalar::from(3);
 
     let circuit = MyCircuit {
         x: Some(x_input),

@@ -3116,6 +3116,7 @@ dependencies = [
 name = "zk-network"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.2",
  "bellman",
  "bls12_381",
  "curve25519-dalek 3.2.0",
