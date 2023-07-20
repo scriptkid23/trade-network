@@ -1,3 +1,4 @@
+use curve25519_dalek::scalar::Scalar;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::transport::OrTransport;
 use libp2p::futures::future::Either;
@@ -6,11 +7,11 @@ use libp2p::gossipsub::{self, ConfigBuilder, Message, MessageId, ValidationMode}
 use libp2p::{
     identity, noise, ping,
     swarm::{keep_alive, NetworkBehaviour, SwarmBuilder, SwarmEvent},
-    tcp, yamux, Multiaddr, PeerId,
+    tcp, yamux, PeerId,
 };
 use libp2p::{mdns, Transport};
 use libp2p_quic as quic;
-use std::any::type_name;
+use rand::rngs::OsRng;
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
 use std::hash::{Hash, Hasher};

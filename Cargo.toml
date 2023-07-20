@@ -12,4 +12,8 @@ libp2p-quic = { features = ["tokio"] }
 tokio = { version = "1", features = ["full"] }
 
 serde = {version = "1.0.171", features = ['derive']}
+bellman = "0.14.0"
 serde_json = "1.0.103"
+curve25519-dalek = "3"
+rand = "0.8.4"
+bls12_381 = "0.8.0"
