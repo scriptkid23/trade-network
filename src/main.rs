@@ -1,4 +1,6 @@
-use curve25519_dalek::scalar::Scalar;
+mod zkp_module;
+
+use bellman::VerificationError;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::transport::OrTransport;
 use libp2p::futures::future::Either;
@@ -11,13 +13,14 @@ use libp2p::{
 };
 use libp2p::{mdns, Transport};
 use libp2p_quic as quic;
-use rand::rngs::OsRng;
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::io::AsyncBufReadExt;
 use tokio::{io, select};
+
+use crate::zkp_module::Output;
 
 fn message_id_fn(message: &Message) -> MessageId {
     let mut s = DefaultHasher::new();
@@ -120,15 +123,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "cannot infer type for type parameter E declared on the enum Result,"
             typically occurs when the Rust compiler is unable to infer the type of a Result variant within an async block.
              */
+
             Ok::<_, io::Error>(())
         };
         select! {
             _  = read_stdin_task => {
                 println!("Buffer: {buffer}");
 
+                let x: String = serde_json::to_string(&zkp_module::generate_proof(1)).expect("msg");
+
                 if let Err(e) = swarm
                     .behaviour_mut().gossipsub
-                    .publish(topic.clone(), buffer.as_bytes()) {
+                    .publish(topic.clone(), x) {
                     println!("Publish error: {e:?}");
                 }
             }
@@ -149,10 +155,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     propagation_source: peer_id,
                     message_id: id,
                     message,
-                })) => println!(
-                        "Got message: '{}' with id: {id} from peer: {peer_id}",
-                        String::from_utf8_lossy(&message.data),
-                    ),
+                })) => {
+
+                    let raw =  String::from_utf8_lossy(&message.data);
+
+
+                    let data: Output = serde_json::from_str(&raw).expect("msg");
+                    let vk_parsed: Result<Vec<u8>, serde_json::Error> = serde_json::from_str(&data.verify_key);
+                    let proof_parsed:Result<Vec<u8>, serde_json::Error> = serde_json::from_str(&data.proof);
+
+                    let verify_key:&[u8] =  &vk_parsed.unwrap();
+                    let proof:&[u8]= &proof_parsed.unwrap();
+
+
+                    let is_valid = zkp_module::verify(verify_key, proof);
+
+                    match is_valid {
+                        Ok(()) => {
+                            println!("Ok with peer_id {:?} and message_id {:?}", peer_id, message);
+                        }
+                        Err(error) => {
+                            println!("{:?}", error);
+                        }
+                    }
+
+
+                    // println!(
+
+                    //     "Got message: '{}' with id: {id} from peer: {peer_id}",
+                    //     String::from_utf8_lossy(&message.data),
+                    // )
+
+
+                },
                 SwarmEvent::NewListenAddr { address, .. } => {
                     println!("Local node is listening on {address}");
                 }

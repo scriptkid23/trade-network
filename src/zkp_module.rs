@@ -1,10 +1,11 @@
-use std::{fs::File, io::BufWriter};
+use std::io::BufWriter;
 
 use bellman::{
     groth16::{
-        create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof, Proof,
+        create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof,
+        Proof, VerifyingKey,
     },
-    Circuit, ConstraintSystem, SynthesisError,
+    Circuit, ConstraintSystem, SynthesisError, VerificationError,
 };
 use bls12_381::{Bls12, Scalar};
 use rand::thread_rng;
@@ -12,6 +13,58 @@ use rand::thread_rng;
 #[derive(Clone, Copy)]
 struct MyCircuit {
     x: Option<Scalar>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Output {
+    pub verify_key: String,
+    pub proof: String,
+}
+
+pub struct IZkp;
+
+pub fn generate_proof(x: u64) -> Output {
+    let rng = &mut thread_rng();
+
+    let params = {
+        let c = MyCircuit { x: None };
+        generate_random_parameters::<Bls12, _, _>(c, rng).unwrap()
+    };
+
+    let vk_vec: Vec<u8> = vec![];
+
+    let mut vk_writer = BufWriter::new(vk_vec);
+
+    params
+        .vk
+        .write(&mut vk_writer)
+        .expect("Failed to write vk to file");
+
+    let circuit = MyCircuit {
+        x: Some(Scalar::from(x)),
+    };
+
+    let proof_vec: Vec<u8> = vec![];
+    let mut proof_writer = BufWriter::new(proof_vec);
+    let proof = create_random_proof(circuit, &params, rng).unwrap();
+
+    proof
+        .write(&mut proof_writer)
+        .expect("Failed to write proof");
+
+    return Output {
+        verify_key: serde_json::to_string(vk_writer.buffer()).expect("Failed to string"),
+        proof: serde_json::to_string(proof_writer.buffer()).expect("Failed to string"),
+    };
+}
+
+pub fn verify(verify_key: &[u8], proof: &[u8]) -> Result<(), VerificationError> {
+    let vk_receiver = VerifyingKey::read(verify_key).expect("Failed to read verify key");
+    let proof_recevier: Proof<Bls12> = Proof::read(proof).expect("Failed to read buffer");
+
+    let pvk = prepare_verifying_key(&vk_receiver);
+
+    return verify_proof(&pvk, &proof_recevier, &[]);
 }
 
 impl Circuit<bls12_381::Scalar> for MyCircuit {
@@ -70,61 +123,4 @@ impl Circuit<bls12_381::Scalar> for MyCircuit {
 
         Ok(())
     }
-}
-
-fn main() {
-    let rng = &mut thread_rng();
-
-    let params = {
-        let c = MyCircuit { x: None };
-        generate_random_parameters::<Bls12, _, _>(c, rng).unwrap()
-    };
-
-    let vk_file: File = File::create("vk.bin").expect("Create vk.bin error");
-    let mut vk_writer = BufWriter::new(vk_file);
-
-    params
-        .vk
-        .write(&mut vk_writer)
-        .expect("Failed to write vk to file");
-    let pvk = prepare_verifying_key(&params.vk);
-
-    // witness = 1
-    let x_input = Scalar::from(1);
-
-    let circuit = MyCircuit { x: Some(x_input) };
-
-    let file: File = File::create("proof.bin").expect("msg");
-
-    let vec_write: Vec<u8> = vec![];
-
-    let mut vec_writer = BufWriter::new(vec_write);
-
-    let mut writer = BufWriter::new(file);
-
-    let proof = create_random_proof(circuit, &params, rng).unwrap();
-
-    println!("{:?}", proof);
-    proof
-        .write(&mut writer)
-        .expect("Failed to write proof to file");
-
-    // Assuming you have the `proof` instance already created
-    // Open a file for writing
-    // let serialized_pvk = serde_json::from_str(&pvk);
-
-    println!("proof: {:?}", proof);
-    proof
-        .write(&mut vec_writer)
-        .expect("Failed to write proof to file");
-
-    print!("{:?}", writer.buffer());
-
-    
-    let proof_recevier: Proof<Bls12> = Proof::read(writer.buffer()).expect("Failed to read buffer");
-
-    print!("Proof Receiver: {:?}", proof_recevier);
-    let is_valid = verify_proof(&pvk, &proof, &[]);
-    
-    print!("{:?}", is_valid);
 }
