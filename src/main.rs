@@ -1,6 +1,5 @@
 mod zkp_module;
 
-use bellman::VerificationError;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::transport::OrTransport;
 use libp2p::futures::future::Either;
@@ -172,20 +171,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                     match is_valid {
                         Ok(()) => {
-                            println!("Ok with peer_id {:?} and message_id {:?}", peer_id, message);
+                            println!("Ok with peer_id {:?} and message_id {:?}", peer_id, id);
                         }
                         Err(error) => {
                             println!("{:?}", error);
                         }
                     }
-
-
-                    // println!(
-
-                    //     "Got message: '{}' with id: {id} from peer: {peer_id}",
-                    //     String::from_utf8_lossy(&message.data),
-                    // )
-
 
                 },
                 SwarmEvent::NewListenAddr { address, .. } => {
