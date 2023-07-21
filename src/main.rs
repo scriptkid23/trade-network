@@ -19,6 +19,8 @@ use std::time::Duration;
 use tokio::io::AsyncBufReadExt;
 use tokio::{io, select};
 
+use regex::Regex;
+
 use crate::zkp_module::Output;
 
 fn message_id_fn(message: &Message) -> MessageId {
@@ -127,15 +129,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         };
         select! {
             _  = read_stdin_task => {
-                println!("Buffer: {buffer}");
+                let lines: Vec<&str> = buffer.split("\r\n").collect();
 
-                let x: String = serde_json::to_string(&zkp_module::generate_proof(1)).expect("msg");
+                match lines[0].parse::<u64>() {
+                    Ok(number) => {
+                        let x: String = serde_json::to_string(&zkp_module::generate_proof(number)).expect("Failed to generate proofo");
 
-                if let Err(e) = swarm
-                    .behaviour_mut().gossipsub
-                    .publish(topic.clone(), x) {
-                    println!("Publish error: {e:?}");
+                        if let Err(e) = swarm
+                            .behaviour_mut().gossipsub
+                            .publish(topic.clone(), x) {
+                            println!("Publish error: {e:?}");
+                        }
+                    }
+                    Err(error) => {
+                        println!("Failed to parse the number: {}", error);
+                    }
                 }
+                //  Recommended to explicitly define the data types you are working with rather than relying on automatic type inference
+
             }
             event = swarm.select_next_some() => match event {
                 SwarmEvent::Behaviour(MyBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
