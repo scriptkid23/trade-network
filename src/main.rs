@@ -131,8 +131,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             _  = read_stdin_task => {
                 let lines: Vec<&str> = buffer.split("\r\n").collect();
 
+
                 match lines[0].parse::<u64>() {
                     Ok(number) => {
+                        //  Recommended to explicitly define the data types you are working with rather than relying on automatic type inference
                         let x: String = serde_json::to_string(&zkp_module::generate_proof(number)).expect("Failed to generate proofo");
 
                         if let Err(e) = swarm
@@ -145,7 +147,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         println!("Failed to parse the number: {}", error);
                     }
                 }
-                //  Recommended to explicitly define the data types you are working with rather than relying on automatic type inference
 
             }
             event = swarm.select_next_some() => match event {
