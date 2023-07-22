@@ -19,8 +19,6 @@ use std::time::Duration;
 use tokio::io::AsyncBufReadExt;
 use tokio::{io, select};
 
-use regex::Regex;
-
 use crate::zkp_module::Output;
 
 fn message_id_fn(message: &Message) -> MessageId {
@@ -131,7 +129,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             _  = read_stdin_task => {
                 let lines: Vec<&str> = buffer.split("\r\n").collect();
 
-
                 match lines[0].parse::<u64>() {
                     Ok(number) => {
                         //  Recommended to explicitly define the data types you are working with rather than relying on automatic type inference
@@ -164,7 +161,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 },
                 SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
                     propagation_source: peer_id,
-                    message_id: id,
+                    message_id: _id,
                     message,
                 })) => {
 
@@ -183,10 +180,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                     match is_valid {
                         Ok(()) => {
-                            println!("Ok with peer_id {:?} and message_id {:?}", peer_id, id);
+                            println!("Successfully verified from {}", peer_id.to_string());
                         }
                         Err(error) => {
-                            println!("{:?}", error);
+                            println!("Failed {:?} from {}", error, peer_id.to_string());
                         }
                     }
 

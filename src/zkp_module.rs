@@ -21,8 +21,6 @@ pub struct Output {
     pub proof: String,
 }
 
-pub struct IZkp;
-
 pub fn generate_proof(x: u64) -> Output {
     let rng = &mut thread_rng();
 
